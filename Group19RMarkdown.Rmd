@@ -1,0 +1,43 @@
+---
+title: "BIOSTAT 650 Project"
+author: "Jaehoon Kim"
+date: "2024-11-17"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library("sas7bdat")
+library("corrplot")
+library("gtsummary")
+library("dplyr")
+library("ggplot2")
+library("data.table")
+library("car")
+library("NHANES")
+```
+
+$$1+1$$
+
+```{r datasetup}
+df = NHANES
+df = NHANES["DiabetesAge" > 10]
+colnames(df)
+scatmatrixData = df[,c("DiabetesAge", "BMI", "BPSys1", "SleepHrsNight", "PhysActiveDays")]
+panel.hist <- function(x, ...)
+{
+usr <- par("usr"); on.exit(par(usr))
+par(usr = c(usr[1:2], 0, 1.5) )
+h <- hist(x, plot = FALSE)
+breaks <- h$breaks; nB <- length(breaks)
+y <- h$counts; y <- y/max(y)
+rect(breaks[-nB], 0, breaks[-1], y, col = "cyan", ...)
+}
+pairs(scatmatrixData, pch = 19, diag.panel=panel.hist)
+
+```
+
+```{r model}
+model <- lm(DiabetesAge ~ Gender+Poverty+BMI+BPSys1+SleepHrsNight+PhysActiveDays, df)
+summary(model)
+```
