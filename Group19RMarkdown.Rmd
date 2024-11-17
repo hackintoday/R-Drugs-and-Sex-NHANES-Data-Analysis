@@ -21,9 +21,27 @@ $$1+1$$
 
 ```{r datasetup}
 df = NHANES
-df = NHANES["DiabetesAge" > 10]
+#df = NHANES["DiabetesAge" > 20]
 colnames(df)
 scatmatrixData = df[,c("DiabetesAge", "BMI", "BPSys1", "SleepHrsNight", "PhysActiveDays")]
+panel.hist <- function(x, ...)
+{
+usr <- par("usr"); on.exit(par(usr))
+par(usr = c(usr[1:2], 0, 1.5) )
+h <- hist(x, plot = FALSE)
+breaks <- h$breaks; nB <- length(breaks)
+y <- h$counts; y <- y/max(y)
+rect(breaks[-nB], 0, breaks[-1], y, col = "cyan", ...)
+}
+pairs(scatmatrixData, pch = 19, diag.panel=panel.hist)
+
+```
+```{r EDA2}
+df = NHANES
+#poverty gender useless?
+colnames(df)
+scatmatrixData = df[,c("BPSys1", "BMI", "SleepHrsNight", 
+    "PhysActiveDays")]
 panel.hist <- function(x, ...)
 {
 usr <- par("usr"); on.exit(par(usr))
@@ -39,5 +57,16 @@ pairs(scatmatrixData, pch = 19, diag.panel=panel.hist)
 
 ```{r model}
 model <- lm(DiabetesAge ~ Gender+Poverty+BMI+BPSys1+SleepHrsNight+PhysActiveDays, df)
+summary(model)
+```
+
+```{r model 2}
+model <- lm(BPSys1 ~ Age+Gender+Poverty+BMI+SleepHrsNight+PhysActiveDays+SmokeNow+AlcoholYear+HardDrugs, df)
+summary(model)
+
+```
+
+```{r model 3}
+model <- lm(SexAge ~ HardDrugs, df)
 summary(model)
 ```
