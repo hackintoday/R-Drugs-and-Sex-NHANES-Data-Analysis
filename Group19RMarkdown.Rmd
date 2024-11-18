@@ -67,6 +67,21 @@ summary(model)
 ```
 
 ```{r model 3}
-model <- lm(SexAge ~ HardDrugs, df)
+model <- lm(SexAge ~ Gender+HHIncome+Education+PhysActive+RegularMarij+HardDrugs+RegularMarij*HardDrugs, df)
+summary(model)
+```
+
+```{r model 3-1}
+model <- lm(SexAge ~ Gender+HHIncome+Education+SameSex+PhysActive+RegularMarij+HardDrugs+RegularMarij*HardDrugs, df)
+summary(model)
+```
+
+```{r model 4}
+model <- lm(SexNumPartnLife ~ Gender+HHIncome+Education+PhysActive+RegularMarij+HardDrugs+RegularMarij*HardDrugs, df)
+summary(model)
+```
+
+```{r model 5}
+model <- lm(SexNumPartnLife ~ Gender+HHIncome+Education+PhysActive+SameSex+RegularMarij+HardDrugs+RegularMarij*HardDrugs, df)
 summary(model)
 ```
