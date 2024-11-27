@@ -53,6 +53,31 @@ rect(breaks[-nB], 0, breaks[-1], y, col = "cyan", ...)
 }
 pairs(scatmatrixData, pch = 19, diag.panel=panel.hist)
 
+#cor(df)
+
+#outlier analysis
+#sensitivity analysis
+#QQ-Plot -> quadratic terms(transformation necessary?)
+#Categorization -> non linearity?
+```
+
+```{r datasetup 2}
+df = NHANES
+#df = NHANES["DiabetesAge" > 20]
+colnames(df)
+scatmatrixData = df[,c("SexAge", "HardDrugs", "RegularMarij")]
+panel.hist <- function(x, ...)
+{
+usr <- par("usr"); on.exit(par(usr))
+par(usr = c(usr[1:2], 0, 1.5) )
+h <- hist(x, plot = FALSE)
+breaks <- h$breaks; nB <- length(breaks)
+y <- h$counts; y <- y/max(y)
+rect(breaks[-nB], 0, breaks[-1], y, col = "cyan", ...)
+}
+pairs(scatmatrixData, pch = 19, diag.panel=panel.hist)
+
+
 ```
 
 ```{r model}
@@ -67,7 +92,9 @@ summary(model)
 ```
 
 ```{r model 3}
-model <- lm(SexAge ~ Gender+HHIncome+Education+PhysActive+RegularMarij+HardDrugs+RegularMarij*HardDrugs, df)
+model <- lm(SexAge ~ Depressed+LittleInterest+HealthGen+Gender+HHIncome+Education+PhysActive+RegularMarij+HardDrugs+RegularMarij*HardDrugs+Depressed*HardDrugs+SmokeAge, df)
+summary(model)
+model <- lm(SexAge ~ RegularMarij+HardDrugs+RegularMarij*HardDrugs, df)
 summary(model)
 ```
 
@@ -84,4 +111,29 @@ summary(model)
 ```{r model 5}
 model <- lm(SexNumPartnLife ~ Gender+HHIncome+Education+PhysActive+SameSex+RegularMarij+HardDrugs+RegularMarij*HardDrugs, df)
 summary(model)
+```
+
+```{R New variable}
+hist(df$SexAge)
+sort(unique(df$SexAge))
+typeof(df$SexAge)
+subset(df, SexAge == 9 & !is.na(SexAge))$SexNumPartnLife
+hist(df$SexNumPartYear[df$SexNumPartYear < 20])
+sort(unique(df$SexNumPartYear))
+hist(df$SexNumPartYear)
+
+hist(df$SexNumPartnLife[df$SexNumPartnLife < 30])
+
+unique(df$SexAge)
+df = mutate(df, AvgSexFreq = Age-SexAge/SexNumPartnLife)
+hist(df$AvgSexFreq)
+```
+
+```{R New variable test}
+df$AvgSexFreq[is.infinite(df$AvgSexFreq)] = NA
+unique(df$AvgSexFreq)
+
+model <- lm(AvgSexFreq ~ Gender+HHIncome+Education+PhysActive+SameSex+RegularMarij+HardDrugs+RegularMarij*HardDrugs, df)
+summary(model)
+
 ```
