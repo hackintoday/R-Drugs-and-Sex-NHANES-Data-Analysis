@@ -64,18 +64,23 @@ model <- lm(SexNumPartnLife ~ Gender+HHIncome+Education+PhysActive+SameSex+Regul
 summary(model)
 ```
 
-Created new variable and log transformed due to extreme skewness
+SexAge is has a good distribution but SexNumPartnLife has extreme skenwness and is discrete count data. This requires a Poisson regression which is out side the scopre of this course. Created new variable using the duration, since first sexual activity where (Age - SexAge) since Age >= SexAge, and dividing by the number of sexual partners in life to see frequency of sexual activity. New variable was log transformed due to extreme skewness that violated normality assumption, which could be checked by QQPlot.
+
+Due to extreme skewness,  we tried to find some observations that had implausible reported data that could been a typo or non serious answer. For instance, given the age 9 was the lowest age at which first sexual activity occured among respondents, observations 8576 and 3416 reported to have had a first sexual activity at 9 with 360 and 500 sexual partners in life, respectively. Observations 4579 and 4580 reported to have had a first sexual activity at 10 and both reportedly had 700 sexual partners in life. Observations 4579 and 4580 reported to have had a first sexual activity at 10 and both reportedly had 700 sexual partners in life. 
 ```{R New variable}
 hist(df$SexAge)
 sort(unique(df$SexAge))
 typeof(df$SexAge)
-subset(df, SexAge == 9 & !is.na(SexAge))$SexNumPartnLife
 hist(df$SexNumPartYear)
 hist(df$SexNumPartYear[df$SexNumPartYear < 20])
 sort(unique(df$SexNumPartYear))
 
 hist(df$SexNumPartnLife)
 hist(df$SexNumPartnLife[df$SexNumPartnLife < 30])
+
+#Show observations with more than 300 sexual partners during lifetime
+which(df$SexNumPartnLife > 300)
+df[which(df$SexNumPartnLife > 300), c("Age", "SexAge", "SexNumPartnLife")]
 
 unique(df$SexAge)
 df = mutate(df, AvgSexFreq = log((Age-SexAge)/SexNumPartnLife))
@@ -100,8 +105,9 @@ summary(model)
 library(ggplot2)
 library(tidyr)
 #Add new column based on missingness
-df$missingness <- ifelse(is.na(df$AvgSexFreq), "Missing", "Not Missing")
 covariates = c("Gender","HHIncome","Education","PhysActive","SameSex","AlcoholYear","RegularMarij","HardDrugs")
+df$missingness <- ifelse(complete.cases(df[, covariates]), "Missing", "Not Missing")
+
 
 ```
 ```{r missigness graphs}
@@ -119,7 +125,7 @@ p4 = ggplot(data = df, mapping=aes(x=PhysActive, fill=as.factor(missingness)))+
   geom_bar(stat="count")+
   scale_fill_manual(values = c("gray", "red"))
 
-grid.arrange(p1,p2,p3,p4, nrow=5)
+grid.arrange(p1,p2,p3,p4, nrow=4)
 ```
 
 ```{r missingness plot 2}
@@ -168,7 +174,8 @@ car::residualPlots(m1, type="response")
 
 ```{r multicolinearity}
 #interactions(???)
-car::vif(m1, type = 'predictor')
+nonintmodel <- lm(AvgSexFreq ~ Gender+HHIncome+Education+PhysActive+SameSex+AlcoholYear+RegularMarij+HardDrugs, df)
+car::vif(nonintmodel,type = 'predictor')
 ```
 
 ```{r outliers}
@@ -184,7 +191,7 @@ ols_plot_resid_lev(m1)
 ```
 
 ```{r remove outliers}
-df2 = df[-c(932, 1059, 1442, 2526, 2738, 2872,3453),]
+df2 = df[-which(df$SexNumPartnLife > 300),]
 m2 = lm(AvgSexFreq ~ Gender+HHIncome+Education+PhysActive+SameSex+AlcoholYear+RegularMarij+HardDrugs+RegularMarij*HardDrugs, df2)
 
 summary(m2)
