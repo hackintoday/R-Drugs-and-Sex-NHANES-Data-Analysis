@@ -115,14 +115,11 @@ p2 = ggplot(data = df, mapping=aes(x=HHIncome, fill=as.factor(missingness)))+
 p3 = ggplot(data = df, mapping=aes(x=Education, fill=as.factor(missingness)))+
   geom_bar(stat="count")+
   scale_fill_manual(values = c("gray", "red"))
-p4 = ggplot(data = df, mapping=aes(x=Education, fill=as.factor(missingness)))+
-  geom_bar(stat="count")+
-  scale_fill_manual(values = c("gray", "red"))
-p5 = ggplot(data = df, mapping=aes(x=PhysActive, fill=as.factor(missingness)))+
+p4 = ggplot(data = df, mapping=aes(x=PhysActive, fill=as.factor(missingness)))+
   geom_bar(stat="count")+
   scale_fill_manual(values = c("gray", "red"))
 
-grid.arrange(p1,p2,p3,p4,p5, nrow=5)
+grid.arrange(p1,p2,p3,p4, nrow=5)
 ```
 
 ```{r missingness plot 2}
