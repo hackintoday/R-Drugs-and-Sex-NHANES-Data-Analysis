@@ -15,6 +15,7 @@ library("ggplot2")
 library("data.table")
 library("car")
 library("NHANES")
+library("olsrr")
 ```
 
 
@@ -25,6 +26,7 @@ df = NHANES
 
 ```
 
+Initial data exploration of covariates that had a relation to SexAge were difficult to perform a correlation plot due to being factors.
 ```{r EDA}
 covariates = c("SexAge","Gender","HHIncome","Education","PhysActive","SameSex","AlcoholYear","RegularMarij","HardDrugs")
 sapply(df[, covariates], is.factor)
@@ -33,37 +35,14 @@ sapply(df[, covariates], is.factor)
 ```
 
 
-```{r datasetup 2}
-df = NHANES
-#df = NHANES["DiabetesAge" > 20]
-colnames(df)
-scatmatrixData = df[,c("SexAge", "HardDrugs", "RegularMarij")]
-panel.hist <- function(x, ...)
-{
-usr <- par("usr"); on.exit(par(usr))
-par(usr = c(usr[1:2], 0, 1.5) )
-h <- hist(x, plot = FALSE)
-breaks <- h$breaks; nB <- length(breaks)
-y <- h$counts; y <- y/max(y)
-rect(breaks[-nB], 0, breaks[-1], y, col = "cyan", ...)
-}
-pairs(scatmatrixData, pch = 19, diag.panel=panel.hist)
 
-
-```
-
-```{r model}
-model <- lm(DiabetesAge ~ Gender+Poverty+BMI+BPSys1+SleepHrsNight+PhysActiveDays, df)
-summary(model)
-```
-
-```{r model 2}
+```{r model 1}
 model <- lm(BPSys1 ~ Age+Gender+Poverty+BMI+SleepHrsNight+PhysActiveDays+SmokeNow+AlcoholYear+HardDrugs, df)
 summary(model)
 
 ```
 
-```{r model 3}
+```{r model 2,3}
 model <- lm(SexAge ~ Depressed+LittleInterest+HealthGen+Gender+HHIncome+Education+PhysActive+RegularMarij+HardDrugs+RegularMarij*HardDrugs+Depressed*HardDrugs+SmokeAge, df)
 summary(model)
 model <- lm(SexAge ~ RegularMarij+HardDrugs+RegularMarij*HardDrugs, df)
@@ -105,6 +84,7 @@ boxplot(df$AvgSexFreq)
 ```
 
 ```{R New variable test}
+#Remove negative infinity
 df$AvgSexFreq[is.infinite(df$AvgSexFreq)] = NA
 #unique(df$AvgSexFreq)
 
@@ -119,31 +99,46 @@ summary(model)
 
 library(ggplot2)
 library(tidyr)
-completedf = df[is.na(df$AvgSexFreq),]
-incompletedf = df[!is.na(df$AvgSexFreq),]
 #Add new column based on missingness
 df$missingness <- ifelse(is.na(df$AvgSexFreq), "Missing", "Not Missing")
 covariates = c("Gender","HHIncome","Education","PhysActive","SameSex","AlcoholYear","RegularMarij","HardDrugs")
 
-A = hist(completedf$AlcoholYear)
-B = hist(incompletedf$AlcoholYear)
-
-plot(A, col = "red")
-plot(B, col = "white", add = TRUE)
-
-hist(df$AlcoholYear)
-
 ```
 ```{r missigness graphs}
 library(gridExtra)
-p1 = ggplot(data = df, mapping=aes(x=AlcoholYear, fill=as.factor(missingness)))+
+p1 = ggplot(data = df, mapping=aes(x=Gender, fill=as.factor(missingness)))+
   geom_bar(stat="count")+
   scale_fill_manual(values = c("gray", "red"))
-p2 = ggplot(data = df, mapping=aes(x=Education, fill=as.factor(missingness)))+
+p2 = ggplot(data = df, mapping=aes(x=HHIncome, fill=as.factor(missingness)))+
+  geom_bar(stat="count")+
+  scale_fill_manual(values = c("gray", "red"))
+p3 = ggplot(data = df, mapping=aes(x=Education, fill=as.factor(missingness)))+
+  geom_bar(stat="count")+
+  scale_fill_manual(values = c("gray", "red"))
+p4 = ggplot(data = df, mapping=aes(x=Education, fill=as.factor(missingness)))+
+  geom_bar(stat="count")+
+  scale_fill_manual(values = c("gray", "red"))
+p5 = ggplot(data = df, mapping=aes(x=PhysActive, fill=as.factor(missingness)))+
   geom_bar(stat="count")+
   scale_fill_manual(values = c("gray", "red"))
 
-grid.arrange(p1,p2,nrow=1)
+grid.arrange(p1,p2,p3,p4,p5, nrow=5)
+```
+
+```{r missingness plot 2}
+p6 = ggplot(data = df, mapping=aes(x=SameSex, fill=as.factor(missingness)))+
+  geom_bar(stat="count")+
+  scale_fill_manual(values = c("gray", "red"))
+p7 = ggplot(data = df, mapping=aes(x=AlcoholYear, fill=as.factor(missingness)))+
+  geom_bar(stat="count")+
+  scale_fill_manual(values = c("gray", "red"))
+p8 = ggplot(data = df, mapping=aes(x=RegularMarij, fill=as.factor(missingness)))+
+  geom_bar(stat="count")+
+  scale_fill_manual(values = c("gray", "red"))
+p9 = ggplot(data = df, mapping=aes(x=HardDrugs, fill=as.factor(missingness)))+
+  geom_bar(stat="count")+
+  scale_fill_manual(values = c("gray", "red"))
+grid.arrange(p6, p7, p8, p9, nrow = 4)
 ```
 
 
@@ -177,4 +172,31 @@ car::residualPlots(m1, type="response")
 ```{r multicolinearity}
 #interactions(???)
 car::vif(m1, type = 'predictor')
+```
+
+```{r outliers}
+model.deffits=dffits(m1)
+model.CD = cooks.distance(m1)
+model.deffits[which.max(model.deffits)]
+model.CD[which.max(model.CD)]
+
+```
+
+```{r plot for outlier}
+ols_plot_resid_lev(m1)
+```
+
+```{r remove outliers}
+df2 = df[-c(932, 1059, 1442, 2526, 2738, 2872,3453),]
+m2 = lm(AvgSexFreq ~ Gender+HHIncome+Education+PhysActive+SameSex+AlcoholYear+RegularMarij+HardDrugs+RegularMarij*HardDrugs, df2)
+
+summary(m2)
+#detect beta change by more than 10 percent?
+100*(coef(m1)-coef(m2))/coef(m1)
+```
+
+```{r rerun qqplot}
+m2.res = m2$residuals
+
+car::qqPlot(m2.res)
 ```
