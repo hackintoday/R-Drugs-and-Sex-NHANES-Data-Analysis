@@ -22,8 +22,6 @@ library("NHANES")
 
 ```{r datasetup 1}
 df = NHANES
-lm(Depressed~LittleInterest, df)
-
 
 ```
 
@@ -87,6 +85,7 @@ model <- lm(SexNumPartnLife ~ Gender+HHIncome+Education+PhysActive+SameSex+Regul
 summary(model)
 ```
 
+Created new variable and log transformed due to extreme skewness
 ```{R New variable}
 hist(df$SexAge)
 sort(unique(df$SexAge))
@@ -100,7 +99,7 @@ hist(df$SexNumPartnLife)
 hist(df$SexNumPartnLife[df$SexNumPartnLife < 30])
 
 unique(df$SexAge)
-df = mutate(df, AvgSexFreq = Age-SexAge/SexNumPartnLife)
+df = mutate(df, AvgSexFreq = log((Age-SexAge)/SexNumPartnLife))
 hist(df$AvgSexFreq)
 boxplot(df$AvgSexFreq)
 ```
@@ -122,16 +121,29 @@ library(ggplot2)
 library(tidyr)
 completedf = df[is.na(df$AvgSexFreq),]
 incompletedf = df[!is.na(df$AvgSexFreq),]
+#Add new column based on missingness
+df$missingness <- ifelse(is.na(df$AvgSexFreq), "Missing", "Not Missing")
 covariates = c("Gender","HHIncome","Education","PhysActive","SameSex","AlcoholYear","RegularMarij","HardDrugs")
 
 A = hist(completedf$AlcoholYear)
 B = hist(incompletedf$AlcoholYear)
 
 plot(A, col = "red")
-plot(B, col = "lightblue", add = TRUE)
+plot(B, col = "white", add = TRUE)
 
-#ggplot(data = df, mapping=aes("AlcoholYear", color=is.na(df$AvgSexFreq)))+
-#geom_histogram(alpha=0.7, binwidth=0.2)
+hist(df$AlcoholYear)
+
+```
+```{r missigness graphs}
+library(gridExtra)
+p1 = ggplot(data = df, mapping=aes(x=AlcoholYear, fill=as.factor(missingness)))+
+  geom_bar(stat="count")+
+  scale_fill_manual(values = c("gray", "red"))
+p2 = ggplot(data = df, mapping=aes(x=Education, fill=as.factor(missingness)))+
+  geom_bar(stat="count")+
+  scale_fill_manual(values = c("gray", "red"))
+
+grid.arrange(p1,p2,nrow=1)
 ```
 
 
@@ -160,4 +172,9 @@ car::avPlots(m1)
 
 
 car::residualPlots(m1, type="response")
+```
+
+```{r multicolinearity}
+#interactions(???)
+car::vif(m1, type = 'predictor')
 ```
