@@ -1,6 +1,6 @@
 ---
 title: "BIOSTAT 650 Project"
-author: "Jaehoon Kim"
+author: "Jaehoon Kim (Group 19)"
 date: "2024-11-17"
 output: pdf_document
 ---
@@ -34,58 +34,36 @@ sapply(df[, covariates], is.factor)
 #corrplot(M, method = 'number')
 ```
 
-
-
-```{r model 1}
-model <- lm(BPSys1 ~ Age+Gender+Poverty+BMI+SleepHrsNight+PhysActiveDays+SmokeNow+AlcoholYear+HardDrugs, df)
-summary(model)
-
-```
-
-```{r model 2,3}
-model <- lm(SexAge ~ Depressed+LittleInterest+HealthGen+Gender+HHIncome+Education+PhysActive+RegularMarij+HardDrugs+RegularMarij*HardDrugs+Depressed*HardDrugs+SmokeAge, df)
-summary(model)
+Running different multiple linear regressions, we found two models of interest after some exploratory data analysis with different covariates for which statistical significance persisted even after controlling for some social demographic covariates.
+```{r model 1,2}
 model <- lm(SexAge ~ RegularMarij+HardDrugs+RegularMarij*HardDrugs, df)
 summary(model)
+
+model <- lm(SexNumPartnLife ~ RegularMarij+HardDrugs+RegularMarij*HardDrugs, df)
+summary(model)
+
 ```
 
-```{r model 3-1}
-model <- lm(SexAge ~ Gender+HHIncome+Education+SameSex+PhysActive+RegularMarij+HardDrugs+RegularMarij*HardDrugs, df)
-summary(model)
-```
-
-```{r model 4}
-model <- lm(SexNumPartnLife ~ Gender+HHIncome+Education+PhysActive+RegularMarij+HardDrugs+RegularMarij*HardDrugs, df)
-summary(model)
-```
-
-```{r model 5}
-model <- lm(SexNumPartnLife ~ Gender+HHIncome+Education+PhysActive+SameSex+RegularMarij+HardDrugs+RegularMarij*HardDrugs, df)
-summary(model)
-```
 
 SexAge is has a good distribution but SexNumPartnLife has extreme skenwness and is discrete count data. This requires a Poisson regression which is out side the scopre of this course. Created new variable using the duration, since first sexual activity where (Age - SexAge) since Age >= SexAge, and dividing by the number of sexual partners in life to see frequency of sexual activity. New variable was log transformed due to extreme skewness that violated normality assumption, which could be checked by QQPlot.
 
-Due to extreme skewness,  we tried to find some observations that had implausible reported data that could been a typo or non serious answer. For instance, given the age 9 was the lowest age at which first sexual activity occured among respondents, observations 8576 and 3416 reported to have had a first sexual activity at 9 with 360 and 500 sexual partners in life, respectively. Observations 4579 and 4580 reported to have had a first sexual activity at 10 and both reportedly had 700 sexual partners in life. Observations 4579 and 4580 reported to have had a first sexual activity at 10 and both reportedly had 700 sexual partners in life. 
+Due to extreme skewness,  we tried to find some observations that had implausible reported data that could been a typo or non serious answer. For instance, observations 8576 and 3416 reported to have had a first sexual activity at 9 with 360 and 500 sexual partners in life, respectively. Observations 4579 and 4580 reported to have had a first sexual activity at 10 and both reportedly had 700 sexual partners in life. Observations 4579 and 4580 reported to have had a first sexual activity at 10 and both reportedly had 700 sexual partners in life. We removed these outliers.
 ```{R New variable}
-hist(df$SexAge)
-sort(unique(df$SexAge))
-typeof(df$SexAge)
-hist(df$SexNumPartYear)
-hist(df$SexNumPartYear[df$SexNumPartYear < 20])
-sort(unique(df$SexNumPartYear))
-
+hist(df$SexAge, main= "First Age at which Sexual Activity Occured")
+hist(df$SexNumPartYear, main = )
 hist(df$SexNumPartnLife)
-hist(df$SexNumPartnLife[df$SexNumPartnLife < 30])
 
 #Show observations with more than 300 sexual partners during lifetime
 which(df$SexNumPartnLife > 300)
 df[which(df$SexNumPartnLife > 300), c("Age", "SexAge", "SexNumPartnLife")]
+df = df[-which(df$SexNumPartnLife > 300),]
 
-unique(df$SexAge)
+#Before log transformation
+df = mutate(df, AvgSexFreq = (Age-SexAge)/SexNumPartnLife)
+hist(df$AvgSexFreq, main = "AvgSexFreq Before log transformation")
+#After log transformation
 df = mutate(df, AvgSexFreq = log((Age-SexAge)/SexNumPartnLife))
-hist(df$AvgSexFreq)
-boxplot(df$AvgSexFreq)
+hist(df$AvgSexFreq, main = "AvgSexFreq After log transformation")
 ```
 
 ```{R New variable test}
@@ -93,35 +71,71 @@ boxplot(df$AvgSexFreq)
 df$AvgSexFreq[is.infinite(df$AvgSexFreq)] = NA
 #unique(df$AvgSexFreq)
 
-model <- lm(AvgSexFreq ~ Gender+HHIncome+Education+PhysActive+SameSex+AlcoholYear+RegularMarij+HardDrugs+RegularMarij*HardDrugs, df)
+df$nPregnancies = is.factor(df$nPregnancies)
+model <- lm(AvgSexFreq ~ SmokeNow+AlcoholYear+RegularMarij+HardDrugs+RegularMarij*HardDrugs+Age+Gender+HHIncome+Education+BMI+DiabetesAge+Depressed+LittleInterest+ PhysActive+SameSex, df)
 summary(model)
 
 #model <- lm(AvgSexFreq ~ #Gender+HHIncome+Education+PhysActive+SameSex+AlcoholYear+RegularMarij+HardDrugs+#RegularMarij*HardDrugs+RegularMarij*AlcoholYear, df)
 #summary(model)
 
 ```
+
+Using the sequential sum of squares we tested for each block of covariates at a significance level 0.05
+
+```{r Sequential SS}
+n = 50
+aov = anova(model <- lm(AvgSexFreq ~ SmokeNow+AlcoholYear+RegularMarij+HardDrugs+RegularMarij*HardDrugs+Age+Gender+HHIncome+Education+BMI+DiabetesAge+Depressed+LittleInterest+PhysActive+SameSex, df))
+aov
+SSY = sum(aov$"Sum Sq")
+SSQ = aov$"Sum Sq"
+MSE = aov$"Mean Sq"[16]
+ss1 = sum(SSQ[c(1:4, 15)])
+print(ss1)
+fstat1 = ss1/5/MSE
+pval1 = 1-pf(q = fstat1, df1 = 5, df2 = n-16)
+print(c(fstat1, pval1))
+ss2 = sum(SSQ[5:8])
+print(ss2)
+fstat2 = ss2/4/MSE
+pval2 = 1-pf(q = fstat2, df1 = 4, df2 = n-16)
+print(c(fstat2, pval2))
+ss3 = sum(SSQ[9:14])
+print(ss3)
+fstat3 = ss3/5/MSE
+pval3 = 1-pf(q = fstat3, df1 = 5, df2 = n-16)
+print(c(fstat3, pval3))
+ss4 = sum(SSQ[14])
+print(ss4)
+fstat4 = ss3/1/MSE
+pval4 = 1-pf(q = fstat4, df1 = 1, df2 = n-16)
+print(c(fstat4, pval4))
+
+
+```
+
 ```{r systematic differences of missing values}
 
 library(ggplot2)
 library(tidyr)
 #Add new column based on missingness
-covariates = c("Gender","HHIncome","Education","PhysActive","SameSex","AlcoholYear","RegularMarij","HardDrugs")
+covariates = c("AvgSexFreq", "SmokeNow","AlcoholYear", "RegularMarij", "HardDrugs", "Age", "Gender","HHIncome","Education")
+sum(complete.cases(df[, covariates]))
 df$missingness <- ifelse(complete.cases(df[, covariates]), "Missing", "Not Missing")
 
 
 ```
 ```{r missigness graphs}
 library(gridExtra)
-p1 = ggplot(data = df, mapping=aes(x=Gender, fill=as.factor(missingness)))+
+p1 = ggplot(data = df, mapping=aes(x=SmokeNow, fill=as.factor(missingness)))+
   geom_bar(stat="count")+
   scale_fill_manual(values = c("gray", "red"))
-p2 = ggplot(data = df, mapping=aes(x=HHIncome, fill=as.factor(missingness)))+
+p2 = ggplot(data = df, mapping=aes(x=AlcoholYear, fill=as.factor(missingness)))+
   geom_bar(stat="count")+
   scale_fill_manual(values = c("gray", "red"))
-p3 = ggplot(data = df, mapping=aes(x=Education, fill=as.factor(missingness)))+
+p3 = ggplot(data = df, mapping=aes(x=RegularMarij, fill=as.factor(missingness)))+
   geom_bar(stat="count")+
   scale_fill_manual(values = c("gray", "red"))
-p4 = ggplot(data = df, mapping=aes(x=PhysActive, fill=as.factor(missingness)))+
+p4 = ggplot(data = df, mapping=aes(x=HardDrugs, fill=as.factor(missingness)))+
   geom_bar(stat="count")+
   scale_fill_manual(values = c("gray", "red"))
 
@@ -129,33 +143,25 @@ grid.arrange(p1,p2,p3,p4, nrow=4)
 ```
 
 ```{r missingness plot 2}
-p6 = ggplot(data = df, mapping=aes(x=SameSex, fill=as.factor(missingness)))+
+p6 = ggplot(data = df, mapping=aes(x=Age, fill=as.factor(missingness)))+
   geom_bar(stat="count")+
   scale_fill_manual(values = c("gray", "red"))
-p7 = ggplot(data = df, mapping=aes(x=AlcoholYear, fill=as.factor(missingness)))+
+p7 = ggplot(data = df, mapping=aes(x=Gender, fill=as.factor(missingness)))+
   geom_bar(stat="count")+
   scale_fill_manual(values = c("gray", "red"))
-p8 = ggplot(data = df, mapping=aes(x=RegularMarij, fill=as.factor(missingness)))+
+p8 = ggplot(data = df, mapping=aes(x=HHIncome, fill=as.factor(missingness)))+
   geom_bar(stat="count")+
   scale_fill_manual(values = c("gray", "red"))
-p9 = ggplot(data = df, mapping=aes(x=HardDrugs, fill=as.factor(missingness)))+
+p9 = ggplot(data = df, mapping=aes(x=Education, fill=as.factor(missingness)))+
   geom_bar(stat="count")+
   scale_fill_manual(values = c("gray", "red"))
 grid.arrange(p6, p7, p8, p9, nrow = 4)
 ```
 
 
-```{r Partial SS}
-library(car)
-car::Anova(lm(AvgSexFreq ~ Gender+HHIncome+Education+PhysActive+SameSex+AlcoholYear+RegularMarij+HardDrugs+RegularMarij*HardDrugs, df), type="III")
-
-
-```
-
-
 ```{r QQplot}
 
-m1 = lm(AvgSexFreq ~ Gender+HHIncome+Education+PhysActive+SameSex+AlcoholYear+RegularMarij+HardDrugs+RegularMarij*HardDrugs, df)
+m1 = lm(AvgSexFreq ~ SmokeNow+AlcoholYear+RegularMarij+HardDrugs+RegularMarij*HardDrugs+Age+Gender+HHIncome+Education, df)
 m1.res = m1$residuals
 
 car::qqPlot(m1.res)
@@ -174,7 +180,7 @@ car::residualPlots(m1, type="response")
 
 ```{r multicolinearity}
 #interactions(???)
-nonintmodel <- lm(AvgSexFreq ~ Gender+HHIncome+Education+PhysActive+SameSex+AlcoholYear+RegularMarij+HardDrugs, df)
+nonintmodel <- lm(AvgSexFreq ~ SmokeNow+AlcoholYear+RegularMarij+Age+Gender+HHIncome+Education, df)
 car::vif(nonintmodel,type = 'predictor')
 ```
 
@@ -183,6 +189,10 @@ model.deffits=dffits(m1)
 model.CD = cooks.distance(m1)
 model.deffits[which.max(model.deffits)]
 model.CD[which.max(model.CD)]
+n = nrow(df)
+p = m1$rank
+plot(m1, which = 4)
+abline(h=4/n,lty=2)
 
 ```
 
@@ -191,9 +201,9 @@ ols_plot_resid_lev(m1)
 ```
 
 ```{r remove outliers}
-df2 = df[-which(df$SexNumPartnLife > 300),]
-m2 = lm(AvgSexFreq ~ Gender+HHIncome+Education+PhysActive+SameSex+AlcoholYear+RegularMarij+HardDrugs+RegularMarij*HardDrugs, df2)
-
+df2 = df[-c(475, 523, 944, 1473, 2737,3315, 8155),]
+m2 = lm(AvgSexFreq ~ SmokeNow+AlcoholYear+RegularMarij+HardDrugs+RegularMarij*HardDrugs+Age+Gender+HHIncome+Education, df2)
+summary(m1)
 summary(m2)
 #detect beta change by more than 10 percent?
 100*(coef(m1)-coef(m2))/coef(m1)
