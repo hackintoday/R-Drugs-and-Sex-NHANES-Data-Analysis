@@ -74,6 +74,8 @@ df$AvgSexFreq[is.infinite(df$AvgSexFreq)] = NA
 df$nPregnancies = is.factor(df$nPregnancies)
 model <- lm(AvgSexFreq ~ SmokeNow+AlcoholYear+RegularMarij+HardDrugs+RegularMarij*HardDrugs+Age+Gender+HHIncome+Education+BMI+DiabetesAge+Depressed+LittleInterest+ PhysActive+SameSex, df)
 summary(model)
+model |>
+  tbl_regression(intercept = TRUE)
 
 #model <- lm(AvgSexFreq ~ #Gender+HHIncome+Education+PhysActive+SameSex+AlcoholYear+RegularMarij+HardDrugs+#RegularMarij*HardDrugs+RegularMarij*AlcoholYear, df)
 #summary(model)
@@ -111,6 +113,23 @@ pval4 = 1-pf(q = fstat4, df1 = 1, df2 = n-16)
 print(c(fstat4, pval4))
 
 
+```
+(i) $\boldsymbol{\beta}_{substance} = (\beta_{SmokeNow}, \beta_{AlcoholYear},\beta_{RegularMarij}, \beta_{HardDrugs}, \beta_{RegularMarij*HardDrugs})^T$
+(ii) $\boldsymbol{\beta}_{Demo} = (\beta_{Age}, \beta_{Gender}, \beta_{HHIncome}, \beta_{Education})^T$
+(iii) $\boldsymbol{\beta}_{Health} = (\beta_{BMI},\beta_{DiabetesAges},\beta_{Depressed},\beta_{LittleInterest},\beta_{PhysActive})^T$
+(iv) $\boldsymbol{\beta}_{SameSex} = (\beta_{SameSex})^T$
+
+
+```{r tbl, message=FALSE, warnings=FALSE, echo=FALSE, results='asis'}
+tbl <- c("
+| Step | Tested Var. |  SS(Num.) | SS(Denom.) | Test Stat. | Dist. | p-value | Decision | Stopping Rule | Decision |
+|------|----------|-----------|--------------|----------------|---------|-------------|-------------|------------|----------| 
+|  $$I$$  |  $$\\boldsymbol{\\beta}_{Substance}$$ |   13.88444     |  26.9329 | 5.155204576 | $$F_{5,34}$$ | 0.001262146 | `Reject `| `Do not stop` | `Collect`|
+|  $$II$$  |  $$\\boldsymbol{\\beta}_{Demo}$$ |   55.61473     |  26.9329 | 25.81174 | $$F_{4,34}$$ | 6.872507e-10 | `Reject `| `Do not stop` | `Collect`|
+|  $$III$$  |  $$\\boldsymbol{\\beta}_{Health}$$ |   5.687399     |  26.9329 | 2.11169493 | $$F_{5,34}$$ | 0.08788892 | `Fail to Reject `| `Not Collect` | `Collect`|
+|  $$IV$$  |  $$\\boldsymbol{\\beta}_{SameSex}$$ |   0.001708498     |  26.9329 | 10.55847467 | $$F_{1,34}$$ | 0.00260712 | `NA `| `NA` | `NA`|
+")
+cat(tbl, sep="")
 ```
 
 ```{r systematic differences of missing values}
@@ -170,6 +189,9 @@ car::qqPlot(m1.res)
 ```{r avPlots}
 
 car::avPlots(m1)
+
+
+
 ```
 
 ```{r Residual Plots}
@@ -178,7 +200,7 @@ car::avPlots(m1)
 car::residualPlots(m1, type="response")
 ```
 
-```{r multicolinearity}
+```{r multicollinearity}
 #interactions(???)
 nonintmodel <- lm(AvgSexFreq ~ SmokeNow+AlcoholYear+RegularMarij+Age+Gender+HHIncome+Education, df)
 car::vif(nonintmodel,type = 'predictor')
@@ -193,20 +215,20 @@ n = nrow(df)
 p = m1$rank
 plot(m1, which = 4)
 abline(h=4/n,lty=2)
+df[c(2737, 3315, 8155),]
 
 ```
 
 ```{r plot for outlier}
 ols_plot_resid_lev(m1)
+df[c(475, 523, 944, 1473),]
 ```
 
 ```{r remove outliers}
-df2 = df[-c(475, 523, 944, 1473, 2737,3315, 8155),]
+df2 = df[-c(3315),]
 m2 = lm(AvgSexFreq ~ SmokeNow+AlcoholYear+RegularMarij+HardDrugs+RegularMarij*HardDrugs+Age+Gender+HHIncome+Education, df2)
 summary(m1)
 summary(m2)
-#detect beta change by more than 10 percent?
-100*(coef(m1)-coef(m2))/coef(m1)
 ```
 
 ```{r rerun qqplot}
