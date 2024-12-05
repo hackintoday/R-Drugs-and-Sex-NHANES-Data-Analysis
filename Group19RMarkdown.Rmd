@@ -170,9 +170,11 @@ p7 = ggplot(data = df, mapping=aes(x=Gender, fill=as.factor(missingness)))+
   scale_fill_manual(values = c("gray", "red"))
 p8 = ggplot(data = df, mapping=aes(x=HHIncome, fill=as.factor(missingness)))+
   geom_bar(stat="count")+
+   scale_x_discrete(labels = c(1,2,3,4,5,6,7,8,9, 10, 11, 12, 13)) +
   scale_fill_manual(values = c("gray", "red"))
 p9 = ggplot(data = df, mapping=aes(x=Education, fill=as.factor(missingness)))+
   geom_bar(stat="count")+
+  scale_x_discrete(labels = c("<8th", "9-11th", "HS", "Some College", "Col Grad" )) +
   scale_fill_manual(values = c("gray", "red"))
 grid.arrange(p6, p7, p8, p9, nrow = 4)
 ```
