@@ -26,7 +26,7 @@ df = NHANES
 
 ```
 
-Initial data exploration of covariates that had a relation to SexAge were difficult to perform a correlation plot due to being factors.
+Initial data exploration of covariates that had a relation to SexAge were difficult to perform via a correlation plot due to many covariates being factors.
 ```{r EDA}
 covariates = c("SexAge","Gender","HHIncome","Education","PhysActive","SameSex","AlcoholYear","RegularMarij","HardDrugs")
 sapply(df[, covariates], is.factor)
@@ -34,7 +34,7 @@ sapply(df[, covariates], is.factor)
 #corrplot(M, method = 'number')
 ```
 
-Running different multiple linear regressions, we found two models of interest after some exploratory data analysis with different covariates for which statistical significance persisted even after controlling for some social demographic covariates.
+Performing several multiple linear regressions, we found two models of interest after some exploratory data analysis with different covariates for which statistical significance persisted even after controlling for some social demographic covariates. Preliminary analysis suggest that hard drug use and regular marijuana is associated on average 1-2 years earlier first sexual activity. Thus, drug use may be associated with higher frequency of sexual activity.
 ```{r model 1,2}
 model <- lm(SexAge ~ RegularMarij+HardDrugs+RegularMarij*HardDrugs, df)
 summary(model)
@@ -65,6 +65,12 @@ hist(df$AvgSexFreq, main = "AvgSexFreq Before log transformation")
 #After log transformation
 df = mutate(df, AvgSexFreq = log((Age-SexAge)/SexNumPartnLife))
 hist(df$AvgSexFreq, main = "AvgSexFreq After log transformation")
+
+tbl_summary(df, by = HardDrugs,
+    statistic = list(
+      all_continuous() ~ "{mean} ({sd})",
+      all_categorical() ~ "{n} / {N} ({p}%)"
+    ))
 ```
 
 ```{R New variable test}
@@ -140,45 +146,44 @@ library(tidyr)
 #Add new column based on missingness
 covariates = c("AvgSexFreq", "SmokeNow","AlcoholYear", "RegularMarij", "HardDrugs", "Age", "Gender","HHIncome","Education")
 sum(complete.cases(df[, covariates]))
-df$missingness <- ifelse(complete.cases(df[, covariates]), "Missing", "Not Missing")
+df$missingness <- ifelse(complete.cases(df[, covariates]), "Not Missing", "Missing")
 
+tbl_summary(df[,c("Age", "Gender", "HHIncome", "Education", "MaritalStatus", "missingness")], by = missingness,
+    statistic = list(
+      all_continuous() ~ "{mean} ({sd})",
+      all_categorical() ~ "{n} / {N} ({p}%)"
+    ))
 
+#logit(missingness~Age+Gender+HHIncome+Education+MaritalStatus,df)
+t.test(df[df$missingness == "Missing",]$Age, df[df$missingness == "Not Missing",]$Age)
+#for{}
+#pdf export
 ```
+Missingness for occurs for those aged below 20 because they are not recorded for some covariates. Why missingness for those aged above 60 occurs is unclear.
+
 ```{r missigness graphs}
 library(gridExtra)
-p1 = ggplot(data = df, mapping=aes(x=SmokeNow, fill=as.factor(missingness)))+
+p1 = ggplot(data = df, mapping=aes(x=Age, fill=as.factor(missingness)))+
   geom_bar(stat="count")+
   scale_fill_manual(values = c("gray", "red"))
-p2 = ggplot(data = df, mapping=aes(x=AlcoholYear, fill=as.factor(missingness)))+
+p2 = ggplot(data = df, mapping=aes(x=Gender, fill=as.factor(missingness)))+
   geom_bar(stat="count")+
   scale_fill_manual(values = c("gray", "red"))
-p3 = ggplot(data = df, mapping=aes(x=RegularMarij, fill=as.factor(missingness)))+
+p3 = ggplot(data = df, mapping=aes(x=Education, fill=as.factor(missingness)))+
+  geom_bar(stat="count")+
+  scale_x_discrete(labels = c("<8th", "9-11th", "HS", "Some College", "College Grad" ))+
+  scale_fill_manual(values = c("gray", "red"))
+p4 = ggplot(data = df, mapping=aes(x=MaritalStatus, fill=as.factor(missingness)))+
   geom_bar(stat="count")+
   scale_fill_manual(values = c("gray", "red"))
-p4 = ggplot(data = df, mapping=aes(x=HardDrugs, fill=as.factor(missingness)))+
+p5 = ggplot(data = df, mapping=aes(x=HHIncome, fill=as.factor(missingness)))+
   geom_bar(stat="count")+
+   scale_x_discrete(labels = c(1,2,3,4,5,6,7,8,9, 10, 11, 12, "NA")) +
   scale_fill_manual(values = c("gray", "red"))
 
-grid.arrange(p1,p2,p3,p4, nrow=4)
+grid.arrange(p1,p2,p3,p4,p5, nrow=5)
 ```
 
-```{r missingness plot 2}
-p6 = ggplot(data = df, mapping=aes(x=Age, fill=as.factor(missingness)))+
-  geom_bar(stat="count")+
-  scale_fill_manual(values = c("gray", "red"))
-p7 = ggplot(data = df, mapping=aes(x=Gender, fill=as.factor(missingness)))+
-  geom_bar(stat="count")+
-  scale_fill_manual(values = c("gray", "red"))
-p8 = ggplot(data = df, mapping=aes(x=HHIncome, fill=as.factor(missingness)))+
-  geom_bar(stat="count")+
-   scale_x_discrete(labels = c(1,2,3,4,5,6,7,8,9, 10, 11, 12, 13)) +
-  scale_fill_manual(values = c("gray", "red"))
-p9 = ggplot(data = df, mapping=aes(x=Education, fill=as.factor(missingness)))+
-  geom_bar(stat="count")+
-  scale_x_discrete(labels = c("<8th", "9-11th", "HS", "Some College", "Col Grad" )) +
-  scale_fill_manual(values = c("gray", "red"))
-grid.arrange(p6, p7, p8, p9, nrow = 4)
-```
 
 
 ```{r QQplot}
@@ -201,6 +206,10 @@ car::avPlots(m1)
 
 
 car::residualPlots(m1, type="response")
+```
+```{r D-W Test}
+car::durbinWatsonTest(m1)
+
 ```
 
 ```{r multicollinearity}
@@ -228,11 +237,8 @@ df[c(517, 928, 1454),]
 ```
 
 ```{r remove outliers}
-df = mutate(df, nlAvgSexFreq = (Age-SexAge)/SexNumPartnLife)
-df$nlAvgSexFreq[is.infinite(df$nlAvgSexFreq)] = NA
-m1 = lm(nlAvgSexFreq ~ SmokeNow+AlcoholYear+RegularMarij+HardDrugs+RegularMarij*HardDrugs+Age+Gender+HHIncome+Education, df)
 df2 = df[-c(517, 928, 1454),]
-m2 = lm(nlAvgSexFreq ~ SmokeNow+AlcoholYear+RegularMarij+HardDrugs+RegularMarij*HardDrugs+Age+Gender+HHIncome+Education, df2)
+m2 = lm(AvgSexFreq ~ SmokeNow+AlcoholYear+RegularMarij+HardDrugs+RegularMarij*HardDrugs+Age+Gender+HHIncome+Education, df2)
 summary(m1)
 summary(m2)
 100*(abs(coef(m1)-coef(m2)))/coef(m1)
