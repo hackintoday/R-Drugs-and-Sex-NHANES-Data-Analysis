@@ -54,9 +54,10 @@ hist(df$SexNumPartYear, main = )
 hist(df$SexNumPartnLife)
 
 #Show observations with more than 300 sexual partners during lifetime
-which(df$SexNumPartnLife > 300)
-df[which(df$SexNumPartnLife > 300), c("Age", "SexAge", "SexNumPartnLife")]
-df = df[-which(df$SexNumPartnLife > 300),]
+boxplot(df$SexNumPartnLife, main = "Number of sexual partners dist. before outlier removal")
+df[which(df$SexNumPartnLife > 100), c("Age", "SexAge", "SexNumPartnLife")]
+df = df[-which(df$SexNumPartnLife > 100),]
+boxplot(df$SexNumPartnLife, main = "Number of sexual partners dist. after outlier removal")
 
 #Before log transformation
 df = mutate(df, AvgSexFreq = (Age-SexAge)/SexNumPartnLife)
@@ -85,7 +86,7 @@ model |>
 Using the sequential sum of squares we tested for each block of covariates at a significance level 0.05
 
 ```{r Sequential SS}
-n = 50
+n = 49
 aov = anova(model <- lm(AvgSexFreq ~ SmokeNow+AlcoholYear+RegularMarij+HardDrugs+RegularMarij*HardDrugs+Age+Gender+HHIncome+Education+BMI+DiabetesAge+Depressed+LittleInterest+PhysActive+SameSex, df))
 aov
 SSY = sum(aov$"Sum Sq")
@@ -203,7 +204,7 @@ car::residualPlots(m1, type="response")
 ```
 
 ```{r multicollinearity}
-#interactions(???)
+#Use a non interactive model to check for collinearity
 nonintmodel <- lm(AvgSexFreq ~ SmokeNow+AlcoholYear+RegularMarij+Age+Gender+HHIncome+Education, df)
 car::vif(nonintmodel,type = 'predictor')
 ```
@@ -223,17 +224,24 @@ df[c(2737, 3315, 8155),]
 
 ```{r plot for outlier}
 ols_plot_resid_lev(m1)
-df[c(475, 523, 944, 1473),]
+df[c(517, 928, 1454),]
 ```
 
 ```{r remove outliers}
-df2 = df[-c(3315),]
-m2 = lm(AvgSexFreq ~ SmokeNow+AlcoholYear+RegularMarij+HardDrugs+RegularMarij*HardDrugs+Age+Gender+HHIncome+Education, df2)
+df = mutate(df, nlAvgSexFreq = (Age-SexAge)/SexNumPartnLife)
+df$nlAvgSexFreq[is.infinite(df$nlAvgSexFreq)] = NA
+m1 = lm(nlAvgSexFreq ~ SmokeNow+AlcoholYear+RegularMarij+HardDrugs+RegularMarij*HardDrugs+Age+Gender+HHIncome+Education, df)
+df2 = df[-c(517, 928, 1454),]
+m2 = lm(nlAvgSexFreq ~ SmokeNow+AlcoholYear+RegularMarij+HardDrugs+RegularMarij*HardDrugs+Age+Gender+HHIncome+Education, df2)
 summary(m1)
 summary(m2)
+100*(abs(coef(m1)-coef(m2)))/coef(m1)
+
 ```
 
 ```{r rerun qqplot}
+m2 = lm(AvgSexFreq ~ SmokeNow+AlcoholYear+RegularMarij+HardDrugs+RegularMarij*HardDrugs+Age+Gender+HHIncome+Education, df2)
+
 m2.res = m2$residuals
 
 car::qqPlot(m2.res)
