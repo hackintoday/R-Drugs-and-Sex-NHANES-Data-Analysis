@@ -17,3 +17,6 @@ Note that survey weights have not been taken into consideration as [documentatio
 - Binomial GLM
 - Data Visualization
 - Inferential Statistics
+- Cook's Distance
+- Leverage
+- Variance Inflation Factor
